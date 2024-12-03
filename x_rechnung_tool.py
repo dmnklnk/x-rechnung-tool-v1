@@ -38,23 +38,41 @@ def attach_xml_to_pdf(pdf_path, xml_path):
         logging.info(f"Erstelle Backup unter: {backup_path}")
         os.rename(pdf_path, backup_path)
         
-        # PDF lesen
+        # PDF lesen und Metadaten kopieren
         reader = PdfReader(backup_path)
         writer = PdfWriter()
 
+        # Kopiere Metadaten wenn vorhanden
+        if hasattr(reader, 'metadata'):
+            writer._info.update(reader.metadata)
+        
         logging.info(f"PDF hat {len(reader.pages)} Seiten")
 
-        # Alle Seiten kopieren
+        # Alle Seiten und deren Eigenschaften kopieren
         for i, page in enumerate(reader.pages):
             logging.info(f"Kopiere Seite {i+1}")
             writer.add_page(page)
+            # Kopiere alle Seiten-Attribute
+            for key, value in page.items():
+                if key != '/Contents':  # Seiteninhalt wurde bereits kopiert
+                    writer.pages[i][key] = value
 
         # XML-Datei als Anhang hinzufügen
         with open(xml_path, 'rb') as xml_file:
             xml_content = xml_file.read()
             xml_filename = os.path.basename(xml_path)
             logging.info(f"Füge XML als Anhang hinzu: {xml_filename}")
+            
+            # Füge die XML als eingebettete Datei hinzu
             writer.add_attachment(xml_filename, xml_content)
+
+            # Füge zusätzliche Metadaten hinzu
+            writer.add_metadata({
+                '/Producer': 'X-Rechnung Tool v1.0',
+                '/Creator': 'X-Rechnung Tool',
+                '/Title': f'{name_without_ext} mit X-Rechnung',
+                '/Subject': 'PDF mit eingebetteter X-Rechnung'
+            })
 
         # Neue PDF speichern
         logging.info(f"Speichere neue PDF unter: {pdf_path}")
@@ -65,7 +83,11 @@ def attach_xml_to_pdf(pdf_path, xml_path):
         if os.path.exists(pdf_path):
             try:
                 test_reader = PdfReader(pdf_path)
-                logging.info(f"Neue PDF erfolgreich erstellt und verifiziert mit {len(test_reader.pages)} Seiten")
+                page_count = len(test_reader.pages)
+                attachment_count = len(test_reader.attachments) if hasattr(test_reader, 'attachments') else 0
+                logging.info(f"Neue PDF erfolgreich erstellt und verifiziert:")
+                logging.info(f"- {page_count} Seiten")
+                logging.info(f"- {attachment_count} Anhänge")
                 return True
             except Exception as e:
                 logging.error(f"Neue PDF konnte nicht verifiziert werden: {str(e)}")
