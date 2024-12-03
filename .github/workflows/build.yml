@@ -1,0 +1,65 @@
+name: Build X-Rechnung Tool
+
+on:
+  workflow_dispatch:
+  push:
+    tags:
+      - "v*"
+
+jobs:
+  build:
+    runs-on: windows-latest
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Set up Python 3.11
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+
+      - name: Install dependencies
+        run: |
+          python -m pip install --upgrade pip
+          pip install wheel setuptools
+          pip install -r requirements.txt
+          pip install pyinstaller
+
+      - name: Verify imports
+        run: |
+          python -c "import sys; print('Python Version:', sys.version)"
+          python -c "import PyPDF2; print('PyPDF2 successfully imported')"
+          python -c "import win32com; print('pywin32 successfully imported')"
+
+      - name: Create Self-Signed Certificate
+        run: |
+          $cert = New-SelfSignedCertificate -DnsName "x-rechnung-tool.local" -Type CodeSigning -CertStoreLocation Cert:\CurrentUser\My
+          $certPath = "Cert:\CurrentUser\My\$($cert.Thumbprint)"
+          $pfxPath = ".\certificate.pfx"
+          $password = ConvertTo-SecureString -String "temp123!" -Force -AsPlainText
+          Export-PfxCertificate -Cert $certPath -FilePath $pfxPath -Password $password
+        shell: pwsh
+
+      - name: Build CLI Application
+        shell: cmd
+        run: |
+          pyinstaller --clean --noconfirm --log-level=DEBUG ^
+            --name x-rechnung-tool ^
+            --onefile ^
+            x_rechnung_tool.py
+
+      - name: Sign EXE
+        run: |
+          $password = ConvertTo-SecureString -String "temp123!" -Force -AsPlainText
+          Import-PfxCertificate -FilePath .\certificate.pfx -CertStoreLocation Cert:\CurrentUser\My -Password $password
+          $cert = Get-ChildItem Cert:\CurrentUser\My -CodeSigningCert | Where-Object {$_.Subject -match "x-rechnung-tool.local"}
+          Set-AuthenticodeSignature -FilePath ".\dist\x-rechnung-tool.exe" -Certificate $cert -TimestampServer "http://timestamp.digicert.com"
+        shell: pwsh
+
+      - name: Create Release
+        if: startsWith(github.ref, 'refs/tags/')
+        uses: softprops/action-gh-release@v1
+        with:
+          files: dist/x-rechnung-tool.exe
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
