@@ -13,7 +13,7 @@ Ein Command-Line-Tool zum Anhängen von X-Rechnung XML-Dateien an PDFs und autom
 ## Verwendung
 
 ```bash
-x_rechnung_tool.exe "C:\pfad\zur\rechnung.pdf" "C:\pfad\zur\rechnung.xml" "empfaenger@firma.de"
+x-rechnung-tool.exe "C:\pfad\zur\rechnung.pdf" "C:\pfad\zur\rechnung.xml" "empfaenger@firma.de"
 ```
 
 ### Parameter
@@ -22,14 +22,32 @@ x_rechnung_tool.exe "C:\pfad\zur\rechnung.pdf" "C:\pfad\zur\rechnung.xml" "empfa
 2. `xml_path`: Pfad zur XML-Datei (X-Rechnung)
 3. `email`: E-Mail-Adresse des Empfängers
 
+### Ausgabe
+
+- Eine neue PDF-Datei mit eingebetteter XML am ursprünglichen Speicherort
+- Die Original-PDF wird mit dem Suffix "\_original" gesichert
+- Eine neue Outlook-E-Mail wird geöffnet mit:
+  - Der angegebenen Empfänger-Adresse
+  - Der neuen PDF als Anhang
+
 ## Technische Details
 
 - Entwickelt in Python 3.11
-- Verwendet PyPDF2 für PDF-Manipulation
+- Verwendet pikepdf für robuste PDF-Manipulation
 - Verwendet pywin32 für Outlook-Integration
 - Windows-kompatibel
 
 ## Abhängigkeiten
 
-- PyPDF2==3.0.1
+- pikepdf==8.11.1
 - pywin32==306
+
+## Build
+
+Das Tool wird automatisch via GitHub Actions als Windows-EXE kompiliert.
+Neue Releases werden automatisch erstellt, wenn ein neuer Tag gepusht wird:
+
+```bash
+git tag v1.0.0
+git push origin v1.0.0
+```
