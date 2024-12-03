@@ -38,41 +38,40 @@ def attach_xml_to_pdf(pdf_path, xml_path):
         logging.info(f"Erstelle Backup unter: {backup_path}")
         os.rename(pdf_path, backup_path)
         
-        # PDF lesen und Metadaten kopieren
+        # PDF lesen
         reader = PdfReader(backup_path)
         writer = PdfWriter()
 
-        # Kopiere Metadaten wenn vorhanden
-        if hasattr(reader, 'metadata'):
-            writer._info.update(reader.metadata)
-        
         logging.info(f"PDF hat {len(reader.pages)} Seiten")
 
-        # Alle Seiten und deren Eigenschaften kopieren
+        # Alle Seiten kopieren
         for i, page in enumerate(reader.pages):
             logging.info(f"Kopiere Seite {i+1}")
             writer.add_page(page)
-            # Kopiere alle Seiten-Attribute
-            for key, value in page.items():
-                if key != '/Contents':  # Seiteninhalt wurde bereits kopiert
-                    writer.pages[i][key] = value
+
+        # Metadaten vom Original übernehmen und neue hinzufügen
+        metadata = {}
+        if hasattr(reader, 'metadata') and reader.metadata:
+            for key, value in reader.metadata.items():
+                if isinstance(value, (str, bool, int, float)):
+                    metadata[key] = value
+
+        # Neue Metadaten hinzufügen
+        metadata.update({
+            '/Producer': 'X-Rechnung Tool v1.0',
+            '/Creator': 'X-Rechnung Tool',
+            '/Title': f'{name_without_ext} mit X-Rechnung',
+            '/Subject': 'PDF mit eingebetteter X-Rechnung'
+        })
+
+        writer.add_metadata(metadata)
 
         # XML-Datei als Anhang hinzufügen
         with open(xml_path, 'rb') as xml_file:
             xml_content = xml_file.read()
             xml_filename = os.path.basename(xml_path)
             logging.info(f"Füge XML als Anhang hinzu: {xml_filename}")
-            
-            # Füge die XML als eingebettete Datei hinzu
             writer.add_attachment(xml_filename, xml_content)
-
-            # Füge zusätzliche Metadaten hinzu
-            writer.add_metadata({
-                '/Producer': 'X-Rechnung Tool v1.0',
-                '/Creator': 'X-Rechnung Tool',
-                '/Title': f'{name_without_ext} mit X-Rechnung',
-                '/Subject': 'PDF mit eingebetteter X-Rechnung'
-            })
 
         # Neue PDF speichern
         logging.info(f"Speichere neue PDF unter: {pdf_path}")
