@@ -56,6 +56,12 @@ jobs:
           Set-AuthenticodeSignature -FilePath ".\dist\x-rechnung-tool.exe" -Certificate $cert -TimestampServer "http://timestamp.digicert.com"
         shell: pwsh
 
+      - name: Upload Build Artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: x-rechnung-tool-windows
+          path: dist/x-rechnung-tool.exe
+
       - name: Create Release
         if: startsWith(github.ref, 'refs/tags/')
         uses: softprops/action-gh-release@v1
