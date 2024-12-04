@@ -5,9 +5,50 @@ import logging
 import pikepdf
 import win32com.client
 import argparse
+import chardet
 
 # Logging konfigurieren
 logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(levelname)s - %(message)s')
+
+def ensure_utf8_encoding(xml_path):
+    """
+    Prüft die Kodierung der XML-Datei und konvertiert sie bei Bedarf nach UTF-8.
+    Returns: Pfad zur UTF-8-kodierten XML-Datei
+    """
+    try:
+        # Datei einlesen und Encoding erkennen
+        with open(xml_path, 'rb') as file:
+            raw_data = file.read()
+            result = chardet.detect(raw_data)
+            detected_encoding = result['encoding']
+            
+        logging.info(f"Erkannte Kodierung der XML: {detected_encoding}")
+        
+        # Wenn es nicht UTF-8 ist, konvertieren
+        if detected_encoding and detected_encoding.upper() != 'UTF-8':
+            logging.info(f"Konvertiere XML von {detected_encoding} nach UTF-8")
+            
+            # Original-Content mit erkannter Kodierung lesen
+            content = raw_data.decode(detected_encoding)
+            
+            # Neuen Dateinamen erstellen
+            dir_path = os.path.dirname(xml_path)
+            base_name = os.path.basename(xml_path)
+            name_without_ext = os.path.splitext(base_name)[0]
+            new_xml_path = os.path.join(dir_path, f"{name_without_ext}_utf8.xml")
+            
+            # Als UTF-8 speichern
+            with open(new_xml_path, 'w', encoding='utf-8') as file:
+                file.write(content)
+                
+            logging.info(f"UTF-8 XML erstellt: {new_xml_path}")
+            return new_xml_path
+            
+        return xml_path
+        
+    except Exception as e:
+        logging.error(f"Fehler bei der Kodierungsprüfung/-konvertierung: {str(e)}")
+        return xml_path
 
 def attach_xml_to_pdf(pdf_path, xml_path):
     """Fügt eine XML-Datei als Anhang zu einem PDF hinzu."""
@@ -22,6 +63,12 @@ def attach_xml_to_pdf(pdf_path, xml_path):
 
         logging.info(f"Verarbeite PDF: {pdf_path}")
         logging.info(f"Verarbeite XML: {xml_path}")
+
+        # Stelle sicher, dass XML UTF-8-kodiert ist
+        utf8_xml_path = ensure_utf8_encoding(xml_path)
+        if utf8_xml_path != xml_path:
+            logging.info(f"Verwende UTF-8-konvertierte XML: {utf8_xml_path}")
+            xml_path = utf8_xml_path
 
         # Originaldatei umbenennen
         original_dir = os.path.dirname(pdf_path)
@@ -72,6 +119,12 @@ def attach_xml_to_pdf(pdf_path, xml_path):
             logging.info(f"- {attachment_count} Anhänge")
             verify_pdf.close()
             pdf.close()
+
+            # Temporäre UTF-8 XML löschen wenn sie erstellt wurde
+            if utf8_xml_path != xml_path and os.path.exists(utf8_xml_path):
+                os.remove(utf8_xml_path)
+                logging.info(f"Temporäre UTF-8 XML gelöscht: {utf8_xml_path}")
+
             return True
 
         except Exception as e:
