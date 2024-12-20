@@ -6,6 +6,7 @@ import pikepdf
 import win32com.client
 import argparse
 import chardet
+from datetime import datetime
 
 # Logging konfigurieren
 logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(levelname)s - %(message)s')
@@ -155,10 +156,23 @@ def create_email_with_attachment(email_address, attachment_path):
         # Absoluten Pfad verwenden
         abs_attachment_path = os.path.abspath(attachment_path)
         
+        # PDF-Name ohne Pfad und Erweiterung extrahieren
+        pdf_name = os.path.splitext(os.path.basename(attachment_path))[0]
+        
+        # Aktuelles Datum im Format DD.MM.YYYY
+        current_date = datetime.now().strftime("%d.%m.%Y")
+        
         outlook = win32com.client.Dispatch('Outlook.Application')
         mail = outlook.CreateItem(0)  # 0 = olMailItem
         mail.To = email_address
-        mail.Subject = "X-Rechnung"
+        mail.Subject = f"Rechnung {pdf_name} - {current_date}"
+        
+        # E-Mail-Body mit Formatierung
+        mail.HTMLBody = """
+        <p>Sehr geehrte Damen und Herren,</p>
+        <p>angefügt erhalten Sie unsere Rechnung mit Bitte um Ausgleich.</p>
+        """
+        
         mail.Attachments.Add(abs_attachment_path)
         mail.Display(True)  # True = zeige das Mail-Fenster an
         logging.info("E-Mail erfolgreich erstellt")
