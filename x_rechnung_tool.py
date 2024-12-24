@@ -143,9 +143,16 @@ def attach_xml_to_pdf(pdf_path, xml_path):
             logging.info("Backup wiederhergestellt nach Fehler")
         return False
 
-def create_email_with_attachment(email_address, attachment_path):
-    """Öffnet eine neue E-Mail mit Anhang im Standard-Mail-Client."""
+def create_email_with_attachment(email_address, attachment_path, mode):
+    """
+    Öffnet eine neue E-Mail mit Anhang im Standard-Mail-Client.
+    mode: 1 = keine E-Mail, 2 = E-Mail anzeigen, 3 = E-Mail direkt senden
+    """
     try:
+        if mode == 1:
+            logging.info("Modus 1: Keine E-Mail wird erstellt")
+            return True
+            
         if not os.path.exists(attachment_path):
             logging.error(f"Anhang nicht gefunden: {attachment_path}")
             return False
@@ -174,8 +181,14 @@ def create_email_with_attachment(email_address, attachment_path):
         """
         
         mail.Attachments.Add(abs_attachment_path)
-        mail.Display(True)  # True = zeige das Mail-Fenster an
-        logging.info("E-Mail erfolgreich erstellt")
+        
+        if mode == 2:
+            mail.Display(True)  # E-Mail-Fenster anzeigen
+            logging.info("E-Mail wurde zur Bearbeitung geöffnet")
+        elif mode == 3:
+            mail.Send()  # E-Mail direkt senden
+            logging.info("E-Mail wurde automatisch versendet")
+            
         return True
     except Exception as e:
         logging.error(f"Fehler beim Erstellen der E-Mail: {str(e)}")
@@ -186,6 +199,8 @@ def main():
     parser.add_argument('pdf_path', help='Pfad zur PDF-Datei')
     parser.add_argument('xml_path', help='Pfad zur XML-Datei')
     parser.add_argument('email', help='E-Mail-Adresse des Empfängers')
+    parser.add_argument('mode', type=int, choices=[1, 2, 3], 
+                      help='Betriebsmodus: 1=Nur PDF erstellen, 2=PDF erstellen und E-Mail öffnen, 3=PDF erstellen und E-Mail senden')
     
     args = parser.parse_args()
 
@@ -193,16 +208,20 @@ def main():
     logging.info(f"PDF Pfad: {args.pdf_path}")
     logging.info(f"XML Pfad: {args.xml_path}")
     logging.info(f"E-Mail: {args.email}")
+    logging.info(f"Modus: {args.mode}")
 
     # XML an PDF anhängen
     if attach_xml_to_pdf(args.pdf_path, args.xml_path):
-        # E-Mail mit Anhang erstellen
-        if create_email_with_attachment(args.email, args.pdf_path):
+        # E-Mail mit Anhang erstellen (abhängig vom Modus)
+        if create_email_with_attachment(args.email, args.pdf_path, args.mode):
             logging.info("Vorgang erfolgreich abgeschlossen!")
             print("Vorgang erfolgreich abgeschlossen!")
+            # Ausgabe des finalen PDF-Pfads
+            print(f"PDF wurde erstellt unter: {os.path.abspath(args.pdf_path)}")
         else:
-            logging.error("Fehler beim Erstellen der E-Mail.")
-            print("Fehler beim Erstellen der E-Mail.")
+            if args.mode != 1:  # Nur Fehler ausgeben, wenn E-Mail erstellt werden sollte
+                logging.error("Fehler beim Erstellen der E-Mail.")
+                print("Fehler beim Erstellen der E-Mail.")
     else:
         logging.error("Fehler beim Anhängen der XML-Datei an die PDF.")
         print("Fehler beim Anhängen der XML-Datei an die PDF.")

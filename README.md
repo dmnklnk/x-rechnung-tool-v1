@@ -6,14 +6,15 @@ Ein Command-Line-Tool zum Anhängen von X-Rechnung XML-Dateien an PDFs und autom
 
 - Fügt eine X-Rechnung (XML) als Anhang zu einer bestehenden PDF-Datei hinzu
 - Erstellt automatisch eine Backup-Kopie der Original-PDF
-- Öffnet eine neue E-Mail im Standard-Mail-Client (Outlook) mit:
-  - Vordefinierter Empfänger-Adresse
-  - Automatisch angehängter PDF (inkl. eingebetteter XML)
+- Drei Betriebsmodi:
+  1. Nur PDF erstellen
+  2. PDF erstellen und E-Mail öffnen
+  3. PDF erstellen und E-Mail automatisch senden
 
 ## Verwendung
 
 ```bash
-x-rechnung-tool.exe "C:\pfad\zur\rechnung.pdf" "C:\pfad\zur\rechnung.xml" "empfaenger@firma.de"
+x-rechnung-tool.exe "C:\pfad\zur\rechnung.pdf" "C:\pfad\zur\rechnung.xml" "empfaenger@firma.de" mode
 ```
 
 ### Parameter
@@ -21,14 +22,20 @@ x-rechnung-tool.exe "C:\pfad\zur\rechnung.pdf" "C:\pfad\zur\rechnung.xml" "empfa
 1. `pdf_path`: Pfad zur PDF-Datei
 2. `xml_path`: Pfad zur XML-Datei (X-Rechnung)
 3. `email`: E-Mail-Adresse des Empfängers
+4. `mode`: Betriebsmodus (1, 2 oder 3)
+   - `1`: Nur PDF erstellen
+   - `2`: PDF erstellen und E-Mail öffnen
+   - `3`: PDF erstellen und E-Mail automatisch senden
 
 ### Ausgabe
 
 - Eine neue PDF-Datei mit eingebetteter XML am ursprünglichen Speicherort
 - Die Original-PDF wird mit dem Suffix "\_original" gesichert
-- Eine neue Outlook-E-Mail wird geöffnet mit:
-  - Der angegebenen Empfänger-Adresse
-  - Der neuen PDF als Anhang
+- Je nach Modus:
+  - Modus 1: Nur PDF-Erstellung
+  - Modus 2: Neue Outlook-E-Mail wird geöffnet
+  - Modus 3: E-Mail wird automatisch versendet
+- Der absolute Pfad zur erstellten PDF wird ausgegeben
 
 ## Technische Details
 
@@ -41,6 +48,7 @@ x-rechnung-tool.exe "C:\pfad\zur\rechnung.pdf" "C:\pfad\zur\rechnung.xml" "empfa
 
 - pikepdf==8.11.1
 - pywin32==306
+- chardet==5.2.0
 
 ## Build
 
