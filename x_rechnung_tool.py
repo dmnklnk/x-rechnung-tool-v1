@@ -173,12 +173,41 @@ def create_email_with_attachment(email_address, attachment_path, mode):
         mail = outlook.CreateItem(0)  # 0 = olMailItem
         mail.To = email_address
         mail.Subject = f"Rechnung {pdf_name} - {current_date}"
+        mail.SentOnBehalfOfName = "buchhaltung@aida-dortmund.de"  # Fester Absender
         
         # E-Mail-Body mit Formatierung
-        mail.HTMLBody = """
+        base_body = """
         <p>Sehr geehrte Damen und Herren,</p>
         <p>angefügt erhalten Sie unsere Rechnung mit Bitte um Ausgleich.</p>
         """
+        
+        # Signatur nur für Mode 3 (automatischer Versand)
+        if mode == 3:
+            signature = """
+            <br/><br/>
+            <p style="margin:0;">Mit freundlichen Grüßen</p>
+            <p style="margin:0;">Ihre Buchhaltung</p>
+            <br/>
+            <table style="font-family: Arial, sans-serif; font-size: 10pt;">
+                <tr>
+                    <td style="">
+                        <p style="margin:0;"><strong>AIDA ORGA Dortmund GmbH</strong></p>
+                        <p style="margin:0;">Planetenfeldstraße 100A</p>
+                        <p style="margin:0;">44379 Dortmund</p>
+                        <br/>
+                        <p style="margin:0;">Tel.: +49 (0)231 557 161-0</p>
+                        <p style="margin:0;">E-Mail: info@aida-dortmund.de</p>
+                        <p style="margin:0;">Web: www.aida-dortmund.de</p>
+                        <br/>
+                        <p style="margin:0;">Geschäftsführung: Jens Vögeding, Eckhard Keine</p>
+                        <p style="margin:0;">Amtsgericht Dortmund HRB 5193</p>
+                    </td>
+                </tr>
+            </table>
+            """
+            mail.HTMLBody = base_body + signature
+        else:
+            mail.HTMLBody = base_body
         
         mail.Attachments.Add(abs_attachment_path)
         
