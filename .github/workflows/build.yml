@@ -18,6 +18,16 @@ jobs:
         with:
           python-version: "3.11"
 
+      - name: Install Tesseract OCR and Ghostscript
+        run: |
+          choco install tesseract --version=5.3.3.20231005 -y
+          choco install ghostscript -y
+          echo "Adding Tesseract to PATH"
+          echo "C:\Program Files\Tesseract-OCR" | Out-File -FilePath $env:GITHUB_PATH -Encoding utf8 -Append
+          echo "Adding Ghostscript to PATH"
+          echo "C:\Program Files\gs\gs10.02.1\bin" | Out-File -FilePath $env:GITHUB_PATH -Encoding utf8 -Append
+        shell: pwsh
+
       - name: Install dependencies
         run: |
           python -m pip install --upgrade pip
@@ -28,8 +38,10 @@ jobs:
       - name: Verify imports
         run: |
           python -c "import sys; print('Python Version:', sys.version)"
-          python -c "import PyPDF2; print('PyPDF2 successfully imported')"
+          python -c "import pikepdf; print('pikepdf successfully imported')"
           python -c "import win32com; print('pywin32 successfully imported')"
+          python -c "import chardet; print('chardet successfully imported')"
+          python -c "import ocrmypdf; print('ocrmypdf successfully imported')"
 
       - name: Create Self-Signed Certificate
         run: |
@@ -46,6 +58,8 @@ jobs:
           pyinstaller --clean --noconfirm --log-level=DEBUG ^
             --name x-rechnung-tool ^
             --onefile ^
+            --add-binary "C:\Program Files\Tesseract-OCR\tesseract.exe;." ^
+            --add-binary "C:\Program Files\gs\gs10.02.1\bin\gswin64c.exe;." ^
             x_rechnung_tool.py
 
       - name: Sign EXE
