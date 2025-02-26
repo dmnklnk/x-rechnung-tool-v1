@@ -6,6 +6,8 @@ import pikepdf
 import win32com.client
 import argparse
 import chardet
+import subprocess
+import tempfile
 from datetime import datetime
 
 # Logging konfigurieren
@@ -51,8 +53,52 @@ def ensure_utf8_encoding(xml_path):
         logging.error(f"Fehler bei der Kodierungsprüfung/-konvertierung: {str(e)}")
         return xml_path
 
+def convert_to_pdfa(input_path, output_path):
+    """
+    Konvertiert eine PDF-Datei in das Format PDF/A-3b.
+    """
+    try:
+        logging.info(f"Konvertiere PDF zu PDF/A-3b: {input_path}")
+        
+        # Temporäre Datei für die Konvertierung
+        temp_output = tempfile.mktemp(suffix='.pdf')
+        
+        # ocrmypdf verwenden, um PDF/A-3b zu erstellen
+        # --output-type pdfa-3 erzeugt PDF/A-3b
+        # --skip-text überspringt OCR, da wir nur konvertieren wollen
+        cmd = [
+            'ocrmypdf',
+            '--output-type', 'pdfa-3',
+            '--skip-text',
+            '--force-ocr',
+            '--quiet',
+            input_path,
+            temp_output
+        ]
+        
+        process = subprocess.run(cmd, capture_output=True, text=True)
+        
+        if process.returncode != 0:
+            logging.error(f"Fehler bei der PDF/A-Konvertierung: {process.stderr}")
+            return False
+            
+        # Erfolgreiche Konvertierung, Datei verschieben
+        if os.path.exists(temp_output):
+            if os.path.exists(output_path):
+                os.remove(output_path)
+            os.rename(temp_output, output_path)
+            logging.info(f"PDF/A-3b-Konvertierung erfolgreich: {output_path}")
+            return True
+        else:
+            logging.error("Konvertierte PDF-Datei wurde nicht erstellt")
+            return False
+            
+    except Exception as e:
+        logging.error(f"Fehler bei der PDF/A-Konvertierung: {str(e)}")
+        return False
+
 def attach_xml_to_pdf(pdf_path, xml_path):
-    """Fügt eine XML-Datei als Anhang zu einem PDF hinzu."""
+    """Fügt eine XML-Datei als Anhang zu einem PDF hinzu und konvertiert zu PDF/A-3b."""
     try:
         # Prüfe ob Dateien existieren
         if not os.path.exists(pdf_path):
@@ -87,6 +133,9 @@ def attach_xml_to_pdf(pdf_path, xml_path):
         os.rename(pdf_path, backup_path)
         
         try:
+            # Temporäre Datei für Zwischenschritt
+            temp_pdf_path = os.path.join(original_dir, f"{name_without_ext}_temp{ext}")
+            
             # PDF mit pikepdf öffnen
             pdf = pikepdf.open(backup_path)
             logging.info(f"PDF hat {len(pdf.pages)} Seiten")
@@ -107,29 +156,47 @@ def attach_xml_to_pdf(pdf_path, xml_path):
                 meta['pdf:Producer'] = 'X-Rechnung Tool v1.0'
                 meta['dc:description'] = 'PDF mit eingebetteter X-Rechnung'
 
-            # Neue PDF speichern
-            logging.info(f"Speichere neue PDF unter: {pdf_path}")
-            pdf.save(pdf_path)
-            
-            # Verifiziere die neue PDF
-            verify_pdf = pikepdf.open(pdf_path)
-            page_count = len(verify_pdf.pages)
-            attachment_count = len(verify_pdf.attachments)
-            logging.info(f"Neue PDF erfolgreich erstellt und verifiziert:")
-            logging.info(f"- {page_count} Seiten")
-            logging.info(f"- {attachment_count} Anhänge")
-            verify_pdf.close()
+            # Temporäre PDF speichern
+            logging.info(f"Speichere temporäre PDF unter: {temp_pdf_path}")
+            pdf.save(temp_pdf_path)
             pdf.close()
-
-            # Temporäre UTF-8 XML löschen wenn sie erstellt wurde
-            if utf8_xml_path != xml_path and os.path.exists(utf8_xml_path):
-                os.remove(utf8_xml_path)
-                logging.info(f"Temporäre UTF-8 XML gelöscht: {utf8_xml_path}")
-
-            return True
+            
+            # Konvertiere zu PDF/A-3b
+            if convert_to_pdfa(temp_pdf_path, pdf_path):
+                logging.info(f"PDF/A-3b-Datei erstellt: {pdf_path}")
+                
+                # Verifiziere die neue PDF
+                verify_pdf = pikepdf.open(pdf_path)
+                page_count = len(verify_pdf.pages)
+                attachment_count = len(verify_pdf.attachments) if hasattr(verify_pdf, 'attachments') else 0
+                logging.info(f"Neue PDF erfolgreich erstellt und verifiziert:")
+                logging.info(f"- {page_count} Seiten")
+                logging.info(f"- {attachment_count} Anhänge")
+                verify_pdf.close()
+                
+                # Temporäre Dateien löschen
+                if os.path.exists(temp_pdf_path):
+                    os.remove(temp_pdf_path)
+                    logging.info(f"Temporäre PDF gelöscht: {temp_pdf_path}")
+                
+                # Temporäre UTF-8 XML löschen wenn sie erstellt wurde
+                if utf8_xml_path != xml_path and os.path.exists(utf8_xml_path):
+                    os.remove(utf8_xml_path)
+                    logging.info(f"Temporäre UTF-8 XML gelöscht: {utf8_xml_path}")
+                
+                return True
+            else:
+                logging.error("PDF/A-3b-Konvertierung fehlgeschlagen")
+                # Bei Fehler Original wiederherstellen
+                if os.path.exists(temp_pdf_path):
+                    os.remove(temp_pdf_path)
+                os.rename(backup_path, pdf_path)
+                return False
 
         except Exception as e:
             logging.error(f"Fehler bei der PDF-Verarbeitung: {str(e)}")
+            if os.path.exists(temp_pdf_path):
+                os.remove(temp_pdf_path)
             if os.path.exists(pdf_path):
                 os.remove(pdf_path)
             os.rename(backup_path, pdf_path)

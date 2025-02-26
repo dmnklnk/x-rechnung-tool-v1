@@ -5,6 +5,7 @@ Ein Command-Line-Tool zum Anhängen von X-Rechnung XML-Dateien an PDFs und autom
 ## Funktionen
 
 - Fügt eine X-Rechnung (XML) als Anhang zu einer bestehenden PDF-Datei hinzu
+- Konvertiert die PDF automatisch in das Format PDF/A-3b (konform mit ZUGFeRD/X-Rechnung)
 - Erstellt automatisch eine Backup-Kopie der Original-PDF
 - Drei Betriebsmodi:
   1. Nur PDF erstellen
@@ -29,7 +30,7 @@ x-rechnung-tool.exe "C:\pfad\zur\rechnung.pdf" "C:\pfad\zur\rechnung.xml" "empfa
 
 ### Ausgabe
 
-- Eine neue PDF-Datei mit eingebetteter XML am ursprünglichen Speicherort
+- Eine neue PDF/A-3b-Datei mit eingebetteter XML am ursprünglichen Speicherort
 - Die Original-PDF wird mit dem Suffix "\_original" gesichert
 - Je nach Modus:
   - Modus 1: Nur PDF-Erstellung
@@ -40,7 +41,8 @@ x-rechnung-tool.exe "C:\pfad\zur\rechnung.pdf" "C:\pfad\zur\rechnung.xml" "empfa
 ## Technische Details
 
 - Entwickelt in Python 3.11
-- Verwendet pikepdf für robuste PDF-Manipulation
+- Verwendet pikepdf für PDF-Manipulation
+- Verwendet ocrmypdf für PDF/A-3b-Konvertierung
 - Verwendet pywin32 für Outlook-Integration
 - Windows-kompatibel
 
@@ -49,6 +51,7 @@ x-rechnung-tool.exe "C:\pfad\zur\rechnung.pdf" "C:\pfad\zur\rechnung.xml" "empfa
 - pikepdf==8.11.1
 - pywin32==306
 - chardet==5.2.0
+- ocrmypdf==16.1.1
 
 ## Build
 
