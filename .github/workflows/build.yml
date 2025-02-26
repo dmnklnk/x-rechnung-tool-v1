@@ -22,10 +22,49 @@ jobs:
         run: |
           choco install tesseract --version=5.3.3.20231005 -y
           choco install ghostscript -y
-          echo "Adding Tesseract to PATH"
+
+          # Überprüfe Tesseract-Installation
+          echo "Tesseract Installation prüfen:"
+          if (Test-Path "C:\Program Files\Tesseract-OCR\tesseract.exe") {
+            echo "Tesseract gefunden unter: C:\Program Files\Tesseract-OCR\tesseract.exe"
+          } else {
+            echo "Tesseract nicht gefunden unter erwartetem Pfad!"
+            Get-ChildItem "C:\Program Files" -Recurse -Filter "tesseract.exe" -ErrorAction SilentlyContinue | ForEach-Object { echo "Gefunden unter: $($_.FullName)" }
+          }
+
+          # Überprüfe Ghostscript-Installation und finde den tatsächlichen Pfad
+          echo "Ghostscript Installation prüfen:"
+          $gsPath = $null
+          Get-ChildItem "C:\Program Files\gs" -Recurse -Filter "gswin64c.exe" -ErrorAction SilentlyContinue | ForEach-Object { 
+            echo "Ghostscript gefunden unter: $($_.FullName)"
+            $gsPath = $_.FullName
+          }
+
+          if ($gsPath) {
+            echo "::set-output name=gs_path::$gsPath"
+            echo "GS_PATH=$gsPath" | Out-File -FilePath $env:GITHUB_ENV -Encoding utf8 -Append
+          } else {
+            echo "Ghostscript nicht gefunden! Suche in anderen Verzeichnissen..."
+            Get-ChildItem "C:\Program Files" -Recurse -Filter "gswin64c.exe" -ErrorAction SilentlyContinue | ForEach-Object { 
+              echo "Ghostscript gefunden unter: $($_.FullName)"
+              $gsPath = $_.FullName
+            }
+            if ($gsPath) {
+              echo "::set-output name=gs_path::$gsPath"
+              echo "GS_PATH=$gsPath" | Out-File -FilePath $env:GITHUB_ENV -Encoding utf8 -Append
+            } else {
+              echo "Ghostscript nicht gefunden!"
+            }
+          }
+
+          # Füge Tesseract zum PATH hinzu
           echo "C:\Program Files\Tesseract-OCR" | Out-File -FilePath $env:GITHUB_PATH -Encoding utf8 -Append
-          echo "Adding Ghostscript to PATH"
-          echo "C:\Program Files\gs\gs10.02.1\bin" | Out-File -FilePath $env:GITHUB_PATH -Encoding utf8 -Append
+
+          # Füge Ghostscript-Verzeichnis zum PATH hinzu, wenn gefunden
+          if ($gsPath) {
+            $gsDir = Split-Path -Parent $gsPath
+            echo "$gsDir" | Out-File -FilePath $env:GITHUB_PATH -Encoding utf8 -Append
+          }
         shell: pwsh
 
       - name: Install dependencies
@@ -53,14 +92,43 @@ jobs:
         shell: pwsh
 
       - name: Build CLI Application
-        shell: cmd
+        shell: pwsh
         run: |
-          pyinstaller --clean --noconfirm --log-level=DEBUG ^
-            --name x-rechnung-tool ^
-            --onefile ^
-            --add-binary "C:\Program Files\Tesseract-OCR\tesseract.exe;." ^
-            --add-binary "C:\Program Files\gs\gs10.02.1\bin\gswin64c.exe;." ^
-            x_rechnung_tool.py
+          # Tesseract-Pfad
+          $tesseractPath = "C:\Program Files\Tesseract-OCR\tesseract.exe"
+
+          # Ghostscript-Pfad aus der Umgebungsvariable oder Fallback
+          $gsPath = $env:GS_PATH
+          if (-not $gsPath) {
+            Write-Host "GS_PATH nicht gefunden, suche nach Ghostscript..."
+            $gsPath = (Get-ChildItem "C:\Program Files" -Recurse -Filter "gswin64c.exe" -ErrorAction SilentlyContinue | Select-Object -First 1).FullName
+          }
+
+          Write-Host "Verwende Tesseract: $tesseractPath"
+          Write-Host "Verwende Ghostscript: $gsPath"
+
+          # Prüfe, ob die Dateien existieren
+          $tesseractExists = Test-Path $tesseractPath
+          $gsExists = $gsPath -and (Test-Path $gsPath)
+
+          Write-Host "Tesseract existiert: $tesseractExists"
+          Write-Host "Ghostscript existiert: $gsExists"
+
+          # Erstelle PyInstaller-Befehl
+          $pyinstallerCmd = "pyinstaller --clean --noconfirm --log-level=DEBUG --name x-rechnung-tool --onefile"
+
+          if ($tesseractExists) {
+            $pyinstallerCmd += " --add-binary `"$tesseractPath;.`""
+          }
+
+          if ($gsExists) {
+            $pyinstallerCmd += " --add-binary `"$gsPath;.`""
+          }
+
+          $pyinstallerCmd += " x_rechnung_tool.py"
+
+          Write-Host "Ausführen: $pyinstallerCmd"
+          Invoke-Expression $pyinstallerCmd
 
       - name: Sign EXE
         run: |
