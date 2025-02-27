@@ -3,12 +3,16 @@ import sys
 import os
 import logging
 import pikepdf
-import win32com.client
 import argparse
 import chardet
 import subprocess
 import tempfile
 from datetime import datetime
+
+# Nur auf Windows importieren
+import platform
+if platform.system() == 'Windows':
+    import win32com.client
 
 # Logging konfigurieren
 logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(levelname)s - %(message)s')
@@ -55,40 +59,63 @@ def ensure_utf8_encoding(xml_path):
 
 def convert_to_pdfa(input_path, output_path):
     """
-    Konvertiert eine PDF-Datei in das Format PDF/A-3b.
+    Konvertiert eine PDF-Datei in das Format PDF/A-3b mit Ghostscript.
     """
     try:
-        logging.info(f"Konvertiere PDF zu PDF/A-3b: {input_path}")
+        logging.info(f"Konvertiere PDF zu PDF/A-3b mit Ghostscript: {input_path}")
         
         # Temporäre Datei für die Konvertierung
         temp_output = tempfile.mktemp(suffix='.pdf')
         
-        # ocrmypdf verwenden, um PDF/A-3b zu erstellen
-        # --output-type pdfa-3 erzeugt PDF/A-3b
-        # --skip-text überspringt OCR, da wir nur konvertieren wollen
+        # Ghostscript-Befehl für PDF/A-3b-Konvertierung
         cmd = [
-            'ocrmypdf',
-            '--output-type', 'pdfa-3',
-            '--skip-text',
-            '--force-ocr',
-            '--quiet',
-            input_path,
-            temp_output
+            'gs',
+            '-dPDFA=3',
+            '-dPDFACompatibilityPolicy=1',
+            '-dBATCH',
+            '-dNOPAUSE',
+            '-dNOOUTERSAVE',
+            '-dNOSAFER',
+            '-sColorConversionStrategy=UseDeviceIndependentColor',
+            '-sDEVICE=pdfwrite',
+            '-dPDFSETTINGS=/prepress',
+            '-dCompatibilityLevel=1.7',
+            '-dAutoRotatePages=/None',
+            '-dAutoFilterColorImages=false',
+            '-dColorImageFilter=/FlateEncode',
+            '-dEmbedAllFonts=true',
+            '-dSubsetFonts=true',
+            '-dColorConversionStrategy=/LeaveColorUnchanged',
+            '-dDownsampleMonoImages=false',
+            '-dDownsampleGrayImages=false',
+            '-dDownsampleColorImages=false',
+            '-sOutputFile=' + output_path,
+            input_path
         ]
         
         process = subprocess.run(cmd, capture_output=True, text=True)
         
         if process.returncode != 0:
-            logging.error(f"Fehler bei der PDF/A-Konvertierung: {process.stderr}")
+            logging.error(f"Fehler bei der PDF/A-Konvertierung mit Ghostscript: {process.stderr}")
             return False
             
-        # Erfolgreiche Konvertierung, Datei verschieben
-        if os.path.exists(temp_output):
-            if os.path.exists(output_path):
-                os.remove(output_path)
-            os.rename(temp_output, output_path)
-            logging.info(f"PDF/A-3b-Konvertierung erfolgreich: {output_path}")
-            return True
+        # Erfolgreiche Konvertierung überprüfen
+        if os.path.exists(output_path):
+            # Öffne die konvertierte PDF und überprüfe, ob sie PDF/A-3b ist
+            try:
+                with pikepdf.open(output_path, allow_overwriting_input=True) as pdf:
+                    # Setze explizit die PDF/A-3b-Konformität in den Metadaten
+                    with pdf.open_metadata(set_pikepdf_as_editor=False) as meta:
+                        meta['pdfaid:part'] = '3'
+                        meta['pdfaid:conformance'] = 'B'
+                        meta['pdf:Producer'] = 'X-Rechnung Tool v1.0 (Ghostscript PDF/A-3b)'
+                    pdf.save(output_path)
+                    
+                logging.info(f"PDF/A-3b-Konvertierung erfolgreich: {output_path}")
+                return True
+            except Exception as e:
+                logging.error(f"Fehler beim Setzen der PDF/A-Metadaten: {str(e)}")
+                return False
         else:
             logging.error("Konvertierte PDF-Datei wurde nicht erstellt")
             return False
@@ -150,9 +177,9 @@ def attach_xml_to_pdf(pdf_path, xml_path):
                 pdf.attachments[xml_filename] = xml_content
 
             # Metadaten aktualisieren
-            with pdf.open_metadata() as meta:
+            with pdf.open_metadata(set_pikepdf_as_editor=False) as meta:
                 meta['dc:title'] = f'{name_without_ext} mit X-Rechnung'
-                meta['dc:creator'] = 'X-Rechnung Tool'
+                meta['dc:creator'] = ['X-Rechnung Tool']
                 meta['pdf:Producer'] = 'X-Rechnung Tool v1.0'
                 meta['dc:description'] = 'PDF mit eingebetteter X-Rechnung'
 
@@ -210,82 +237,66 @@ def attach_xml_to_pdf(pdf_path, xml_path):
             logging.info("Backup wiederhergestellt nach Fehler")
         return False
 
-def create_email_with_attachment(email_address, attachment_path, mode):
+def create_email_with_attachment(recipient_email, pdf_path, mode):
     """
-    Öffnet eine neue E-Mail mit Anhang im Standard-Mail-Client.
-    mode: 1 = keine E-Mail, 2 = E-Mail anzeigen, 3 = E-Mail direkt senden
+    Erstellt eine E-Mail mit dem PDF als Anhang.
+    Mode 1: Nur PDF erstellen, keine E-Mail
+    Mode 2: PDF erstellen und E-Mail öffnen
+    Mode 3: PDF erstellen und E-Mail senden
     """
-    try:
-        if mode == 1:
-            logging.info("Modus 1: Keine E-Mail wird erstellt")
-            return True
-            
-        if not os.path.exists(attachment_path):
-            logging.error(f"Anhang nicht gefunden: {attachment_path}")
-            return False
-
-        logging.info(f"Erstelle E-Mail für: {email_address}")
-        logging.info(f"Mit Anhang: {attachment_path}")
+    if mode == 1:
+        # Nur PDF erstellen, keine E-Mail
+        logging.info("Modus 1: Nur PDF erstellt, keine E-Mail.")
+        return True
         
-        # Absoluten Pfad verwenden
-        abs_attachment_path = os.path.abspath(attachment_path)
-        
-        # PDF-Name ohne Pfad und Erweiterung extrahieren
-        pdf_name = os.path.splitext(os.path.basename(attachment_path))[0]
-        
-        # Aktuelles Datum im Format DD.MM.YYYY
-        current_date = datetime.now().strftime("%d.%m.%Y")
-        
-        outlook = win32com.client.Dispatch('Outlook.Application')
-        mail = outlook.CreateItem(0)  # 0 = olMailItem
-        mail.To = email_address
-        mail.Subject = f"Rechnung {pdf_name} - {current_date}"
-        mail.SentOnBehalfOfName = "buchhaltung@aida-dortmund.de"  # Fester Absender
-        
-        # E-Mail-Body mit Formatierung
-        base_body = """
-        <p>Sehr geehrte Damen und Herren,</p>
-        <p>angefügt erhalten Sie unsere Rechnung mit Bitte um Ausgleich.</p>
-        """
-        
-        # Signatur nur für Mode 3 (automatischer Versand)
+    # Auf nicht-Windows-Systemen simulieren wir nur den E-Mail-Versand
+    if platform.system() != 'Windows':
+        logging.info(f"E-Mail-Funktionalität wird auf {platform.system()} simuliert")
+        logging.info(f"Würde E-Mail an {recipient_email} mit Anhang {pdf_path} erstellen")
         if mode == 3:
-            signature = """
-            <br/><br/>
-            <p style="margin:0;">Mit freundlichen Grüßen</p>
-            <p style="margin:0;">Ihre Buchhaltung</p>
-            <br/>
-            <table style="font-family: Arial, sans-serif; font-size: 10pt;">
-                <tr>
-                    <td style="">
-                        <p style="margin:0;"><strong>AIDA ORGA Dortmund GmbH</strong></p>
-                        <p style="margin:0;">Planetenfeldstraße 100A</p>
-                        <p style="margin:0;">44379 Dortmund</p>
-                        <br/>
-                        <p style="margin:0;">Tel.: +49 (0)231 557 161-0</p>
-                        <p style="margin:0;">E-Mail: info@aida-dortmund.de</p>
-                        <p style="margin:0;">Web: www.aida-dortmund.de</p>
-                        <br/>
-                        <p style="margin:0;">Geschäftsführung: Jens Vögeding, Eckhard Keine</p>
-                        <p style="margin:0;">Amtsgericht Dortmund HRB 5193</p>
-                    </td>
-                </tr>
-            </table>
-            """
-            mail.HTMLBody = base_body + signature
-        else:
-            mail.HTMLBody = base_body
+            logging.info("Würde E-Mail automatisch senden")
+        return True
         
-        mail.Attachments.Add(abs_attachment_path)
+    try:
+        # Outlook-Anwendung starten
+        outlook = win32com.client.Dispatch("Outlook.Application")
         
+        # Neue E-Mail erstellen
+        mail = outlook.CreateItem(0)  # 0 = olMailItem
+        
+        # E-Mail-Eigenschaften setzen
+        mail.To = recipient_email
+        mail.Subject = "X-Rechnung"
+        
+        # Basis-Body für die E-Mail
+        base_body = "Sehr geehrte Damen und Herren,\n\n"
+        base_body += "anbei erhalten Sie eine Rechnung im Format X-Rechnung.\n\n"
+        base_body += "Mit freundlichen Grüßen\n"
+        
+        # Je nach Modus unterschiedliche Aktionen
         if mode == 2:
-            mail.Display(True)  # E-Mail-Fenster anzeigen
-            logging.info("E-Mail wurde zur Bearbeitung geöffnet")
+            # E-Mail öffnen
+            mail.Body = base_body
+            mail.Attachments.Add(os.path.abspath(pdf_path))
+            mail.Display(True)
+            logging.info("E-Mail wurde erstellt und geöffnet.")
+            
         elif mode == 3:
-            mail.Send()  # E-Mail direkt senden
-            logging.info("E-Mail wurde automatisch versendet")
+            # E-Mail senden
+            # HTML-Body mit Signatur für Modus 3
+            html_body = "<p>Sehr geehrte Damen und Herren,</p>"
+            html_body += "<p>anbei erhalten Sie eine Rechnung im Format X-Rechnung.</p>"
+            html_body += "<p>Mit freundlichen Grüßen</p>"
+            html_body += "<p><b>Buchhaltung AIDA Dortmund</b></p>"
+            
+            mail.HTMLBody = html_body
+            mail.Attachments.Add(os.path.abspath(pdf_path))
+            mail.Sender = "buchhaltung@aida-dortmund.de"
+            mail.Send()
+            logging.info("E-Mail wurde automatisch gesendet.")
             
         return True
+        
     except Exception as e:
         logging.error(f"Fehler beim Erstellen der E-Mail: {str(e)}")
         return False

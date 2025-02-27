@@ -1,0 +1,174 @@
+﻿<?xml version="1.0" encoding="UTF-8"?>
+<ubl:Invoice
+  xmlns:ubl="urn:oasis:names:specification:ubl:schema:xsd:Invoice-2"
+  xmlns:cac="urn:oasis:names:specification:ubl:schema:xsd:CommonAggregateComponents-2"
+  xmlns:cbc="urn:oasis:names:specification:ubl:schema:xsd:CommonBasicComponents-2"
+  xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+  xsi:schemaLocation="urn:oasis:names:specification:ubl:schema:xsd:Invoice-2 http://docs.oasis-open.org/ubl/os-UBL-2.1/xsd/maindoc/UBL-Invoice-2.1.xsd">
+<cbc:CustomizationID>urn:cen.eu:en16931:2017#compliant#urn:xeinkauf.de:kosit:xrechnung_3.0</cbc:CustomizationID>
+<cbc:ProfileID>urn:fdc:peppol.eu:2017:poacc:billing:01:1.0</cbc:ProfileID>
+<cbc:ID>20140140</cbc:ID>
+<cbc:IssueDate>2024-11-04</cbc:IssueDate>
+<cbc:DueDate>2024-11-18</cbc:DueDate>
+<cbc:InvoiceTypeCode>380</cbc:InvoiceTypeCode>
+<cbc:Note>Rechnung</cbc:Note>
+<cbc:DocumentCurrencyCode>EUR</cbc:DocumentCurrencyCode>
+<cbc:BuyerReference>20140140</cbc:BuyerReference>
+<cac:ProjectReference>
+<cbc:ID>53124-10019</cbc:ID>
+</cac:ProjectReference>
+<cac:AccountingSupplierParty>
+<cac:Party>
+<cbc:EndpointID schemeID="EM">invoice.msf@medico.eu</cbc:EndpointID>
+<cac:PostalAddress>
+<cbc:StreetName>Fuggerstr. 20</cbc:StreetName>
+<cbc:CityName>Ibbenbueren-Laggenbeck</cbc:CityName>
+<cbc:PostalZone>49479</cbc:PostalZone>
+<cac:Country>
+<cbc:IdentificationCode>DE</cbc:IdentificationCode>
+</cac:Country>
+</cac:PostalAddress>
+<cac:PartyTaxScheme>
+<cbc:CompanyID>DE811496374</cbc:CompanyID>
+<cac:TaxScheme>
+<cbc:ID>VAT</cbc:ID>
+</cac:TaxScheme>
+</cac:PartyTaxScheme>
+<cac:PartyLegalEntity>
+<cbc:RegistrationName>H.S. FASHION logistics GmbH</cbc:RegistrationName>
+</cac:PartyLegalEntity>
+<cac:Contact>
+<cbc:Name>Thomas Bosien</cbc:Name>
+<cbc:Telephone>0541/7603410-</cbc:Telephone>
+<cbc:ElectronicMail>bosien@fashion-logistics.de</cbc:ElectronicMail>
+</cac:Contact>
+</cac:Party>
+</cac:AccountingSupplierParty>
+<cac:AccountingCustomerParty>
+<cac:Party>
+<cbc:EndpointID schemeID="EM">invoice.msf@medico.eu</cbc:EndpointID>
+<cac:PostalAddress>
+<cbc:StreetName>Artlandstraße 73</cbc:StreetName>
+<cbc:CityName>Quakenbrück</cbc:CityName>
+<cbc:PostalZone>49610</cbc:PostalZone>
+<cac:Country>
+<cbc:IdentificationCode>DE</cbc:IdentificationCode>
+</cac:Country>
+</cac:PostalAddress>
+<cac:PartyLegalEntity>
+<cbc:RegistrationName>medico sports fashion GmbH  </cbc:RegistrationName>
+</cac:PartyLegalEntity>
+<cac:Contact>
+<cbc:Name> invoice</cbc:Name>
+<cbc:Telephone>05431188500</cbc:Telephone>
+<cbc:ElectronicMail>invoice.msf@medico.eu</cbc:ElectronicMail>
+</cac:Contact>
+</cac:Party>
+</cac:AccountingCustomerParty>
+<cac:PaymentMeans>
+<cbc:PaymentMeansCode name="Ueberweisung">1</cbc:PaymentMeansCode>
+<cbc:PaymentID>20140140</cbc:PaymentID>
+<cac:PayeeFinancialAccount>
+<cbc:ID>DE</cbc:ID>
+<cbc:Name>Sparkasse Lemgo</cbc:Name>
+<cac:FinancialInstitutionBranch>
+<cbc:ID>WELADED1LEM</cbc:ID>
+</cac:FinancialInstitutionBranch>
+</cac:PayeeFinancialAccount>
+</cac:PaymentMeans>
+<cac:PaymentTerms>
+<cbc:Note>zahlbar netto Kasse innerhalb von 14 Tagen</cbc:Note>
+</cac:PaymentTerms>
+<cac:TaxTotal>
+<cbc:TaxAmount currencyID="EUR">237.46</cbc:TaxAmount>
+<cac:TaxSubtotal>
+<cbc:TaxableAmount currencyID="EUR">1249.80</cbc:TaxableAmount>
+<cbc:TaxAmount currencyID="EUR">237.46</cbc:TaxAmount>
+<cac:TaxCategory>
+<cbc:ID>S</cbc:ID>
+<cbc:Percent>19</cbc:Percent>
+<cac:TaxScheme>
+<cbc:ID>VAT</cbc:ID>
+</cac:TaxScheme>
+</cac:TaxCategory>
+</cac:TaxSubtotal>
+</cac:TaxTotal>
+<cac:LegalMonetaryTotal>
+<cbc:LineExtensionAmount currencyID="EUR">1249.80</cbc:LineExtensionAmount>
+<cbc:TaxExclusiveAmount currencyID="EUR">1249.80</cbc:TaxExclusiveAmount>
+<cbc:TaxInclusiveAmount currencyID="EUR">1487.26</cbc:TaxInclusiveAmount>
+<cbc:PayableAmount currencyID="EUR">1487.26</cbc:PayableAmount>
+</cac:LegalMonetaryTotal>
+<cac:InvoiceLine>
+<cbc:ID>   1</cbc:ID>
+<cbc:InvoicedQuantity unitCode="C62">    652.0000</cbc:InvoicedQuantity>
+<cbc:LineExtensionAmount currencyID="EUR">684.60</cbc:LineExtensionAmount>
+<cac:Item>
+<cbc:Description>
+Wareneingang lt. beil. Aufstellung pro Karton
+</cbc:Description>
+<cbc:Name>Platzhalterprodukt</cbc:Name>
+<cac:SellersItemIdentification>
+<cbc:ID>0</cbc:ID>
+</cac:SellersItemIdentification>
+<cac:ClassifiedTaxCategory>
+<cbc:ID>S</cbc:ID>
+<cbc:Percent>19</cbc:Percent>
+<cac:TaxScheme>
+<cbc:ID>VAT</cbc:ID>
+</cac:TaxScheme>
+</cac:ClassifiedTaxCategory>
+</cac:Item>
+<cac:Price>
+<cbc:PriceAmount currencyID="EUR">1.05</cbc:PriceAmount>
+</cac:Price>
+</cac:InvoiceLine>
+<cac:InvoiceLine>
+<cbc:ID>   2</cbc:ID>
+<cbc:InvoicedQuantity unitCode="C62">    319.0000</cbc:InvoicedQuantity>
+<cbc:LineExtensionAmount currencyID="EUR">382.80</cbc:LineExtensionAmount>
+<cac:Item>
+<cbc:Description>
+Einlagerung pro LHM
+</cbc:Description>
+<cbc:Name>Platzhalterprodukt</cbc:Name>
+<cac:SellersItemIdentification>
+<cbc:ID>0</cbc:ID>
+</cac:SellersItemIdentification>
+<cac:ClassifiedTaxCategory>
+<cbc:ID>S</cbc:ID>
+<cbc:Percent>19</cbc:Percent>
+<cac:TaxScheme>
+<cbc:ID>VAT</cbc:ID>
+</cac:TaxScheme>
+</cac:ClassifiedTaxCategory>
+</cac:Item>
+<cac:Price>
+<cbc:PriceAmount currencyID="EUR">1.20</cbc:PriceAmount>
+</cac:Price>
+</cac:InvoiceLine>
+<cac:InvoiceLine>
+<cbc:ID>   3</cbc:ID>
+<cbc:InvoicedQuantity unitCode="C62">    152.0000</cbc:InvoicedQuantity>
+<cbc:LineExtensionAmount currencyID="EUR">182.40</cbc:LineExtensionAmount>
+<cac:Item>
+<cbc:Description>
+Auslagerung pro LHM
+</cbc:Description>
+<cbc:Name>Platzhalterprodukt</cbc:Name>
+<cac:SellersItemIdentification>
+<cbc:ID>0</cbc:ID>
+</cac:SellersItemIdentification>
+<cac:ClassifiedTaxCategory>
+<cbc:ID>S</cbc:ID>
+<cbc:Percent>19</cbc:Percent>
+<cac:TaxScheme>
+<cbc:ID>VAT</cbc:ID>
+</cac:TaxScheme>
+</cac:ClassifiedTaxCategory>
+</cac:Item>
+<cac:Price>
+<cbc:PriceAmount currencyID="EUR">1.20</cbc:PriceAmount>
+</cac:Price>
+</cac:InvoiceLine>
+</ubl:Invoice>

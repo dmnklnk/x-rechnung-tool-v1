@@ -143,6 +143,7 @@ jobs:
         with:
           name: x-rechnung-tool-windows
           path: dist/x-rechnung-tool.exe
+          retention-days: 5 # Artifacts werden nach 5 Tagen automatisch gelöscht
 
       - name: Create Release
         if: startsWith(github.ref, 'refs/tags/')
