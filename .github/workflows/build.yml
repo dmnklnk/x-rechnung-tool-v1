@@ -80,7 +80,8 @@ jobs:
           python -c "import pikepdf; print('pikepdf successfully imported')"
           python -c "import win32com; print('pywin32 successfully imported')"
           python -c "import chardet; print('chardet successfully imported')"
-          python -c "import ocrmypdf; print('ocrmypdf successfully imported')"
+          python -c "import platform; print('platform successfully imported')"
+          python -c "import glob; print('glob successfully imported')"
 
       - name: Create Self-Signed Certificate
         run: |
@@ -123,6 +124,14 @@ jobs:
 
           if ($gsExists) {
             $pyinstallerCmd += " --add-binary `"$gsPath;.`""
+            
+            # Kopiere auch die DLLs aus dem Ghostscript-Verzeichnis
+            $gsDllDir = Split-Path -Parent $gsPath
+            Get-ChildItem -Path $gsDllDir -Filter "*.dll" | ForEach-Object {
+              $dllPath = $_.FullName
+              Write-Host "Füge Ghostscript DLL hinzu: $dllPath"
+              $pyinstallerCmd += " --add-binary `"$dllPath;.`""
+            }
           }
 
           $pyinstallerCmd += " x_rechnung_tool.py"

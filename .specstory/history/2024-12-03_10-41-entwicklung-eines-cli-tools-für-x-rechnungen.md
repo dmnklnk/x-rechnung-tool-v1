@@ -10005,6 +10005,113 @@ Lass uns bitte ALLES committen und pushen
 
 _**Assistant**_
 
+Ich werde alle Änderungen committen und pushen. Zuerst fügen wir alle geänderten Dateien zum Staging-Bereich hinzu:
+
+---
+
+_****_
+
+```bash
+git add .
+```
+
+```
+diff --git a/x_rechnung_tool.py b/x_rechnung_tool.py
++
+ # Logging konfigurieren
+ logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(levelname)s - %(message)s')
+ 
+@@ -55,40 +59,63 @@ def ensure_utf8_encoding(xml_path):
+ 
+ def convert_to_pdfa(input_path, output_path):
+     """
+-    Konvertiert eine PDF-Datei in das Format PDF/A-3b.
++    Konvertiert eine PDF-Datei in das Format PDF/A-3b mit Ghostscript.
+     """
+     try:
+-        logging.info(f"Konvertiere PDF zu PDF/A-3b: {input_path}")
++        logging.info(f"Konvertiere PDF zu PDF/A-3b mit Ghostscript: {input_path}")
+         
+         # Temporäre Datei für die Konvertierung
+         temp_output = tempfile.mktemp(suffix='.pdf')
+         
+-        # ocrmypdf verwenden, um PDF/A-3b zu erstellen
+-        # --output-type pdfa-3 erzeugt PDF/A-3b
+-        # --skip-text überspringt OCR, da wir nur konvertieren wollen
++        # Ghostscript-Befehl für PDF/A-3b-Konvertierung
+         cmd = [
+-            'ocrmypdf',
+-            '--output-type', 'pdfa-3',
+-            '--skip-text',
+-            '--force-ocr',
+-            '--quiet',
+-            input_path,
+-            temp_output
++            'gs',
++            '-dPDFA=3',
++            '-dPDFACompatibilityPolicy=1',
++            '-dBATCH',
++            '-dNOPAUSE',
++            '-dNOOUTERSAVE',
++            '-dNOSAFER',
++            '-sColorConversionStrategy=UseDeviceIndependentColor',
++            '-sDEVICE=pdfwrite',
++            '-dPDFSETTINGS=/prepress',
+:
+```
+
+---
+
+_****_
+
+
+
+---
+
+_**User**_
+
+Beim testen der EXE auf einem Windows-Rechner erhalte ich diese Fehlermeldung: 
+
+C:\Users\lunk\Desktop\X-Rechnung Test>x-rechnung-tool.exe "test.pdf" "test.xml" "lunk@aida-dortmund.de" 1
+2025-02-27 10:19:40,289 - INFO - X-Rechnung Tool gestartet
+2025-02-27 10:19:40,289 - INFO - PDF Pfad: test.pdf
+2025-02-27 10:19:40,290 - INFO - XML Pfad: test.xml
+2025-02-27 10:19:40,290 - INFO - E-Mail: lunk@aida-dortmund.de
+2025-02-27 10:19:40,290 - INFO - Modus: 1
+2025-02-27 10:19:40,290 - INFO - Verarbeite PDF: test.pdf
+2025-02-27 10:19:40,291 - INFO - Verarbeite XML: test.xml
+2025-02-27 10:19:40,296 - INFO - Erkannte Kodierung der XML: UTF-8-SIG
+2025-02-27 10:19:40,296 - INFO - Konvertiere XML von UTF-8-SIG nach UTF-8
+2025-02-27 10:19:40,304 - INFO - UTF-8 XML erstellt: test_utf8.xml
+2025-02-27 10:19:40,304 - INFO - Verwende UTF-8-konvertierte XML: test_utf8.xml
+2025-02-27 10:19:40,304 - INFO - Erstelle Backup unter: test_original.pdf
+2025-02-27 10:19:40,582 - INFO - PDF hat 1 Seiten
+2025-02-27 10:19:40,583 - INFO - Füge XML als Anhang hinzu: test_utf8.xml
+2025-02-27 10:19:40,590 - INFO - Speichere temporäre PDF unter: test_temp.pdf
+2025-02-27 10:19:40,606 - INFO - Konvertiere PDF zu PDF/A-3b mit Ghostscript: test_temp.pdf
+2025-02-27 10:19:40,622 - ERROR - Fehler bei der PDF/A-Konvertierung: [WinError 2] Das System kann die angegebene Datei nicht finden
+2025-02-27 10:19:40,622 - ERROR - PDF/A-3b-Konvertierung fehlgeschlagen
+2025-02-27 10:19:40,630 - ERROR - Fehler beim Anhängen der XML-Datei an die PDF.
+Fehler beim Anhängen der XML-Datei an die PDF.
+
+---
+
+_**Assistant**_
+
+Ich sehe das Problem. Die Fehlermeldung zeigt, dass Ghostscript nicht gefunden werden kann, wenn die EXE auf einem Windows-Rechner ausgeführt wird. Wir müssen den Code anpassen, um sicherzustellen, dass Ghostscript korrekt eingebunden wird.
+
+Lassen Sie uns die `x_rechnung_tool.py` Datei anpassen, um dieses Problem zu beheben:
+
+---
+
+_****_
+
+
+
+---
+
+_****_
+
 
 
 ---

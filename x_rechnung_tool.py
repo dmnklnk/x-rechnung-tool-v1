@@ -17,6 +17,56 @@ if platform.system() == 'Windows':
 # Logging konfigurieren
 logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(levelname)s - %(message)s')
 
+# Prüfen, ob wir in einer PyInstaller-EXE laufen
+def is_bundled():
+    return getattr(sys, 'frozen', False) and hasattr(sys, '_MEIPASS')
+
+# Pfad zu Ghostscript finden
+def find_ghostscript_path():
+    """Findet den Pfad zur Ghostscript-Executable"""
+    if platform.system() != 'Windows':
+        return 'gs'  # Auf Unix-Systemen ist gs normalerweise im PATH
+    
+    # Auf Windows suchen wir nach der Executable
+    try:
+        # Zuerst prüfen, ob gs im PATH ist
+        process = subprocess.run(['where', 'gswin64c.exe'], capture_output=True, text=True)
+        if process.returncode == 0 and process.stdout.strip():
+            return process.stdout.strip().split('\n')[0]
+        
+        # Wenn nicht im PATH, in typischen Installationsverzeichnissen suchen
+        common_paths = [
+            r"C:\Program Files\gs\*\bin\gswin64c.exe",
+            r"C:\Program Files (x86)\gs\*\bin\gswin64c.exe",
+            r"C:\Program Files\gs\*\bin\gswin32c.exe",
+            r"C:\Program Files (x86)\gs\*\bin\gswin32c.exe"
+        ]
+        
+        import glob
+        for pattern in common_paths:
+            matches = glob.glob(pattern)
+            if matches:
+                return matches[0]
+        
+        # Wenn wir in einer PyInstaller-EXE sind, könnte Ghostscript mitgeliefert sein
+        if is_bundled():
+            bundled_gs = os.path.join(sys._MEIPASS, "gswin64c.exe")
+            if os.path.exists(bundled_gs):
+                return bundled_gs
+            bundled_gs = os.path.join(sys._MEIPASS, "gswin32c.exe")
+            if os.path.exists(bundled_gs):
+                return bundled_gs
+        
+        # Fallback: Versuche einfach gswin64c.exe zu verwenden und hoffe, dass es gefunden wird
+        return "gswin64c.exe"
+    except Exception as e:
+        logging.warning(f"Fehler beim Suchen von Ghostscript: {str(e)}")
+        return "gswin64c.exe"  # Fallback
+
+# Ghostscript-Pfad einmal beim Start ermitteln
+GHOSTSCRIPT_PATH = find_ghostscript_path()
+logging.info(f"Verwende Ghostscript: {GHOSTSCRIPT_PATH}")
+
 def ensure_utf8_encoding(xml_path):
     """
     Prüft die Kodierung der XML-Datei und konvertiert sie bei Bedarf nach UTF-8.
@@ -69,7 +119,7 @@ def convert_to_pdfa(input_path, output_path):
         
         # Ghostscript-Befehl für PDF/A-3b-Konvertierung
         cmd = [
-            'gs',
+            GHOSTSCRIPT_PATH,  # Verwende den gefundenen Ghostscript-Pfad
             '-dPDFA=3',
             '-dPDFACompatibilityPolicy=1',
             '-dBATCH',
@@ -93,6 +143,7 @@ def convert_to_pdfa(input_path, output_path):
             input_path
         ]
         
+        logging.info(f"Ausführen des Ghostscript-Befehls: {' '.join(cmd)}")
         process = subprocess.run(cmd, capture_output=True, text=True)
         
         if process.returncode != 0:
