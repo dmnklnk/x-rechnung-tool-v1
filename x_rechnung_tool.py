@@ -159,7 +159,7 @@ def convert_to_pdfa(input_path, output_path):
                     with pdf.open_metadata(set_pikepdf_as_editor=False) as meta:
                         meta['pdfaid:part'] = '3'
                         meta['pdfaid:conformance'] = 'B'
-                        meta['pdf:Producer'] = 'X-Rechnung Tool v1.0 (Ghostscript PDF/A-3b)'
+                        meta['pdf:Producer'] = 'AIDA ORGA Dortmund GmbH'
                     pdf.save(output_path)
                     
                 logging.info(f"PDF/A-3b-Konvertierung erfolgreich: {output_path}")
@@ -230,8 +230,8 @@ def attach_xml_to_pdf(pdf_path, xml_path):
             # Metadaten aktualisieren
             with pdf.open_metadata(set_pikepdf_as_editor=False) as meta:
                 meta['dc:title'] = f'{name_without_ext} mit X-Rechnung'
-                meta['dc:creator'] = ['X-Rechnung Tool']
-                meta['pdf:Producer'] = 'X-Rechnung Tool v1.0'
+                meta['dc:creator'] = ['AIDA ORGA Dortmund GmbH']
+                meta['pdf:Producer'] = 'AIDA ORGA Dortmund GmbH'
                 meta['dc:description'] = 'PDF mit eingebetteter X-Rechnung'
 
             # Temporäre PDF speichern
