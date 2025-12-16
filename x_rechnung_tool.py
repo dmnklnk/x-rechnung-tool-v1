@@ -322,7 +322,6 @@ def create_email_with_attachment(recipient_email, pdf_path, mode):
         # Basis-Body für die E-Mail
         base_body = "Sehr geehrte Damen und Herren,\n\n"
         base_body += "anbei erhalten Sie eine Rechnung im Format X-Rechnung.\n\n"
-        base_body += "Mit freundlichen Grüßen\n"
         
         # Je nach Modus unterschiedliche Aktionen
         if mode == 2:
