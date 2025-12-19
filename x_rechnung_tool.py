@@ -321,7 +321,7 @@ def create_email_with_attachment(recipient_email, pdf_path, mode):
         
         # Basis-Body für die E-Mail
         base_body = "Sehr geehrte Damen und Herren,\n\n"
-        base_body += "anbei erhalten Sie eine Rechnung im Format X-Rechnung.\n\n"
+        base_body += "anbei erhalten Sie unsere E-Rechnung.\n\n"
         
         # Je nach Modus unterschiedliche Aktionen
         if mode == 2:
@@ -335,9 +335,7 @@ def create_email_with_attachment(recipient_email, pdf_path, mode):
             # E-Mail senden
             # HTML-Body mit Signatur für Modus 3
             html_body = "<p>Sehr geehrte Damen und Herren,</p>"
-            html_body += "<p>anbei erhalten Sie eine Rechnung im Format X-Rechnung.</p>"
-            html_body += "<p>Mit freundlichen Grüßen</p>"
-            html_body += "<p><b>Buchhaltung AIDA Dortmund</b></p>"
+            html_body += "<p>anbei erhalten Sie unsere E-Rechnung.</p>"
             
             mail.HTMLBody = html_body
             mail.Attachments.Add(os.path.abspath(pdf_path))
