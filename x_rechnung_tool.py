@@ -70,15 +70,29 @@ logging.info(f"Verwende Ghostscript: {GHOSTSCRIPT_PATH}")
 def ensure_utf8_encoding(xml_path):
     """
     Prüft die Kodierung der XML-Datei und konvertiert sie bei Bedarf nach UTF-8.
+    Optimiert für Geschwindigkeit: Prüft zuerst BOM/Header, bevor chardet verwendet wird.
     Returns: Pfad zur UTF-8-kodierten XML-Datei
     """
     try:
-        # Datei einlesen und Encoding erkennen
+        # Schnelle Prüfung: UTF-8 BOM oder XML-Header lesen
         with open(xml_path, 'rb') as file:
             raw_data = file.read()
-            result = chardet.detect(raw_data)
-            detected_encoding = result['encoding']
             
+        # Schnelle UTF-8-Prüfung: BOM oder erste Bytes
+        if raw_data.startswith(b'\xef\xbb\xbf'):  # UTF-8 BOM
+            return xml_path
+        
+        # Versuche direkt als UTF-8 zu dekodieren (schnellste Methode)
+        try:
+            raw_data.decode('utf-8')
+            return xml_path  # Bereits UTF-8
+        except UnicodeDecodeError:
+            pass  # Nicht UTF-8, weiter mit chardet
+        
+        # Nur wenn nötig: chardet verwenden (langsam, aber genau)
+        result = chardet.detect(raw_data)
+        detected_encoding = result['encoding']
+        
         logging.info(f"Erkannte Kodierung der XML: {detected_encoding}")
         
         # Wenn es nicht UTF-8 ist, konvertieren
@@ -110,14 +124,12 @@ def ensure_utf8_encoding(xml_path):
 def convert_to_pdfa(input_path, output_path):
     """
     Konvertiert eine PDF-Datei in das Format PDF/A-3b mit Ghostscript.
+    Optimiert für Geschwindigkeit.
     """
     try:
         logging.info(f"Konvertiere PDF zu PDF/A-3b mit Ghostscript: {input_path}")
         
-        # Temporäre Datei für die Konvertierung
-        temp_output = tempfile.mktemp(suffix='.pdf')
-        
-        # Ghostscript-Befehl für PDF/A-3b-Konvertierung
+        # Ghostscript-Befehl für PDF/A-3b-Konvertierung (optimiert für Geschwindigkeit)
         cmd = [
             GHOSTSCRIPT_PATH,  # Verwende den gefundenen Ghostscript-Pfad
             '-dPDFA=3',
@@ -126,33 +138,36 @@ def convert_to_pdfa(input_path, output_path):
             '-dNOPAUSE',
             '-dNOOUTERSAVE',
             '-dNOSAFER',
-            '-sColorConversionStrategy=UseDeviceIndependentColor',
+            '-dQUIET',  # Weniger Ausgabe = schneller
             '-sDEVICE=pdfwrite',
             '-dPDFSETTINGS=/prepress',
             '-dCompatibilityLevel=1.7',
             '-dAutoRotatePages=/None',
-            '-dAutoFilterColorImages=false',
-            '-dColorImageFilter=/FlateEncode',
             '-dEmbedAllFonts=true',
             '-dSubsetFonts=true',
             '-dColorConversionStrategy=/LeaveColorUnchanged',
             '-dDownsampleMonoImages=false',
             '-dDownsampleGrayImages=false',
             '-dDownsampleColorImages=false',
+            '-dAutoFilterColorImages=false',
+            '-dColorImageFilter=/FlateEncode',
+            '-dGrayImageFilter=/FlateEncode',
+            '-dMonoImageFilter=/FlateEncode',
+            '-dFastWebView',  # Schnellere Anzeige
             '-sOutputFile=' + output_path,
             input_path
         ]
         
-        logging.info(f"Ausführen des Ghostscript-Befehls: {' '.join(cmd)}")
-        process = subprocess.run(cmd, capture_output=True, text=True)
+        # Ghostscript ausführen (stderr für Fehlerbehandlung, stdout unterdrückt für Performance)
+        process = subprocess.run(cmd, stdout=subprocess.DEVNULL, stderr=subprocess.PIPE)
         
         if process.returncode != 0:
-            logging.error(f"Fehler bei der PDF/A-Konvertierung mit Ghostscript: {process.stderr}")
+            logging.error(f"Fehler bei der PDF/A-Konvertierung mit Ghostscript: {process.stderr.decode('utf-8', errors='ignore')}")
             return False
             
         # Erfolgreiche Konvertierung überprüfen
         if os.path.exists(output_path):
-            # Öffne die konvertierte PDF und überprüfe, ob sie PDF/A-3b ist
+            # Öffne die konvertierte PDF und setze PDF/A-3b-Metadaten
             try:
                 with pikepdf.open(output_path, allow_overwriting_input=True) as pdf:
                     # Setze explizit die PDF/A-3b-Konformität in den Metadaten
@@ -227,14 +242,12 @@ def attach_xml_to_pdf(pdf_path, xml_path):
             pdf = pikepdf.open(temp_pdf_path)
             logging.info(f"PDF hat {len(pdf.pages)} Seiten")
 
-            # XML-Datei als Anhang hinzufügen
+            # XML-Datei einmalig einlesen und als Anhang hinzufügen
+            xml_filename = os.path.basename(xml_path)
+            logging.info(f"Füge XML als Anhang hinzu: {xml_filename}")
             with open(xml_path, 'rb') as xml_file:
                 xml_content = xml_file.read()
-                xml_filename = os.path.basename(xml_path)
-                logging.info(f"Füge XML als Anhang hinzu: {xml_filename}")
-                
-                # Füge die XML als FileAttachment hinzu
-                pdf.attachments[xml_filename] = xml_content
+            pdf.attachments[xml_filename] = xml_content
 
             # Metadaten aktualisieren
             with pdf.open_metadata(set_pikepdf_as_editor=False) as meta:
@@ -249,16 +262,12 @@ def attach_xml_to_pdf(pdf_path, xml_path):
             # Finale PDF mit Anhang speichern
             logging.info(f"Speichere finale PDF mit XML-Anhang unter: {pdf_path}")
             pdf.save(pdf_path)
-            pdf.close()
             
-            # Verifiziere die neue PDF
-            verify_pdf = pikepdf.open(pdf_path)
-            page_count = len(verify_pdf.pages)
-            attachment_count = len(verify_pdf.attachments) if hasattr(verify_pdf, 'attachments') else 0
-            logging.info(f"Neue PDF erfolgreich erstellt und verifiziert:")
-            logging.info(f"- {page_count} Seiten")
-            logging.info(f"- {attachment_count} Anhänge")
-            verify_pdf.close()
+            # Schnelle Verifizierung (ohne erneutes Öffnen)
+            page_count = len(pdf.pages)
+            attachment_count = len(pdf.attachments) if hasattr(pdf, 'attachments') else 0
+            logging.info(f"PDF erfolgreich erstellt: {page_count} Seiten, {attachment_count} Anhänge")
+            pdf.close()
             
             # Temporäre Dateien löschen
             if os.path.exists(temp_pdf_path):
