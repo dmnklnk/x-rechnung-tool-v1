@@ -214,17 +214,8 @@ def attach_xml_to_pdf(pdf_path, xml_path):
             # Temporäre Datei für Zwischenschritt
             temp_pdf_path = os.path.join(original_dir, f"{name_without_ext}_temp{ext}")
             
-            # ZUERST: Konvertiere zu PDF/A-3b (OHNE Anhang)
-            logging.info("Schritt 1: Konvertiere PDF zu PDF/A-3b")
-            if not convert_to_pdfa(backup_path, temp_pdf_path):
-                logging.error("PDF/A-3b-Konvertierung fehlgeschlagen")
-                os.rename(backup_path, pdf_path)
-                return False
-            
-            logging.info(f"PDF/A-3b-Konvertierung erfolgreich: {temp_pdf_path}")
-            
-            # DANACH: PDF mit pikepdf öffnen und XML-Anhang hinzufügen
-            pdf = pikepdf.open(temp_pdf_path)
+            # PDF mit pikepdf öffnen
+            pdf = pikepdf.open(backup_path)
             logging.info(f"PDF hat {len(pdf.pages)} Seiten")
 
             # XML-Datei als Anhang hinzufügen
@@ -242,35 +233,43 @@ def attach_xml_to_pdf(pdf_path, xml_path):
                 meta['dc:creator'] = ['AIDA ORGA Dortmund GmbH']
                 meta['pdf:Producer'] = 'AIDA ORGA Dortmund GmbH'
                 meta['dc:description'] = 'PDF mit eingebetteter X-Rechnung'
-                # PDF/A-Metadaten beibehalten
-                meta['pdfaid:part'] = '3'
-                meta['pdfaid:conformance'] = 'B'
 
-            # Finale PDF mit Anhang speichern
-            logging.info(f"Speichere finale PDF mit XML-Anhang unter: {pdf_path}")
-            pdf.save(pdf_path)
+            # Temporäre PDF speichern
+            logging.info(f"Speichere temporäre PDF unter: {temp_pdf_path}")
+            pdf.save(temp_pdf_path)
             pdf.close()
             
-            # Verifiziere die neue PDF
-            verify_pdf = pikepdf.open(pdf_path)
-            page_count = len(verify_pdf.pages)
-            attachment_count = len(verify_pdf.attachments) if hasattr(verify_pdf, 'attachments') else 0
-            logging.info(f"Neue PDF erfolgreich erstellt und verifiziert:")
-            logging.info(f"- {page_count} Seiten")
-            logging.info(f"- {attachment_count} Anhänge")
-            verify_pdf.close()
-            
-            # Temporäre Dateien löschen
-            if os.path.exists(temp_pdf_path):
-                os.remove(temp_pdf_path)
-                logging.info(f"Temporäre PDF gelöscht: {temp_pdf_path}")
-            
-            # Temporäre UTF-8 XML löschen wenn sie erstellt wurde
-            if utf8_xml_path != xml_path and os.path.exists(utf8_xml_path):
-                os.remove(utf8_xml_path)
-                logging.info(f"Temporäre UTF-8 XML gelöscht: {utf8_xml_path}")
-            
-            return True
+            # Konvertiere zu PDF/A-3b
+            if convert_to_pdfa(temp_pdf_path, pdf_path):
+                logging.info(f"PDF/A-3b-Datei erstellt: {pdf_path}")
+                
+                # Verifiziere die neue PDF
+                verify_pdf = pikepdf.open(pdf_path)
+                page_count = len(verify_pdf.pages)
+                attachment_count = len(verify_pdf.attachments) if hasattr(verify_pdf, 'attachments') else 0
+                logging.info(f"Neue PDF erfolgreich erstellt und verifiziert:")
+                logging.info(f"- {page_count} Seiten")
+                logging.info(f"- {attachment_count} Anhänge")
+                verify_pdf.close()
+                
+                # Temporäre Dateien löschen
+                if os.path.exists(temp_pdf_path):
+                    os.remove(temp_pdf_path)
+                    logging.info(f"Temporäre PDF gelöscht: {temp_pdf_path}")
+                
+                # Temporäre UTF-8 XML löschen wenn sie erstellt wurde
+                if utf8_xml_path != xml_path and os.path.exists(utf8_xml_path):
+                    os.remove(utf8_xml_path)
+                    logging.info(f"Temporäre UTF-8 XML gelöscht: {utf8_xml_path}")
+                
+                return True
+            else:
+                logging.error("PDF/A-3b-Konvertierung fehlgeschlagen")
+                # Bei Fehler Original wiederherstellen
+                if os.path.exists(temp_pdf_path):
+                    os.remove(temp_pdf_path)
+                os.rename(backup_path, pdf_path)
+                return False
 
         except Exception as e:
             logging.error(f"Fehler bei der PDF-Verarbeitung: {str(e)}")
